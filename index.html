@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>YatraGuide – Tourist Guide & Booking</title>
+<style>
+:root{--bg:#fbf7f0;--card:#fff;--ink:#1f2933;--mut:#6b7280;--pri:#0f766e;--acc:#f59e0b;--bd:#e5e0d5;--bad:#b91c1c;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#14181b;--card:#1d2327;--ink:#eef2f3;--mut:#9aa5ab;--pri:#2dd4bf;--bd:#2d363b}}
+:root[data-theme="dark"]{--bg:#14181b;--card:#1d2327;--ink:#eef2f3;--mut:#9aa5ab;--pri:#2dd4bf;--bd:#2d363b}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
+header{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;padding:14px 18px;background:var(--pri);color:#fff}
+header b{font-size:20px}header .r{display:flex;gap:8px;align-items:center;font-size:13px}
+main{max-width:1000px;margin:0 auto;padding:16px}
+nav{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+button,select,input{font:inherit}
+.tab,.btn{border:1px solid var(--bd);background:var(--card);color:var(--ink);padding:8px 14px;border-radius:8px;cursor:pointer}
+.tab.on,.btn.p{background:var(--pri);color:#fff;border-color:var(--pri)}
+.btn.d{color:var(--bad)}.btn.s{padding:4px 10px;font-size:13px}
+header .btn{background:transparent;color:#fff;border-color:#fff8}
+input,select,textarea{width:100%;padding:8px 10px;border:1px solid var(--bd);border-radius:8px;background:var(--card);color:var(--ink)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:6px}
+.em{font-size:34px}.mut{color:var(--mut);font-size:13px}.pr{font-weight:700;color:var(--pri)}
+.bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}.bar>*{flex:1 1 150px;width:auto}
+.tw{overflow-x:auto}table{width:100%;border-collapse:collapse;background:var(--card);border-radius:10px}
+th,td{padding:8px 10px;border-bottom:1px solid var(--bd);text-align:left;white-space:nowrap}
+.st{padding:2px 8px;border-radius:99px;font-size:12px;background:var(--acc);color:#222}.st.Confirmed{background:#16a34a;color:#fff}.st.Cancelled{background:var(--bad);color:#fff}
+.modal{position:fixed;inset:0;background:#0008;display:flex;align-items:center;justify-content:center;padding:16px;z-index:9}
+.box{background:var(--card);border-radius:14px;padding:18px;width:100%;max-width:420px;display:flex;flex-direction:column;gap:10px;max-height:90%;overflow:auto}
+label{font-size:13px;color:var(--mut)}h2{margin:4px 0 10px}
+.login{max-width:380px;margin:40px auto}
+</style></head><body>
+<header><b>🧭 YatraGuide</b><div class="r" id="hr"></div></header>
+<main id="app">Loading…</main>
+<script>
+let db=null,usr=null,canAdmin=false,local=false,uid='local',uname='',isAdmin=false,ready=false,view='places',F={q:'',city:'',cat:''};
+let D={places:[],guides:[],bookings:[]};
+const $=s=>document.querySelector(s),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const LS={g(k){try{return JSON.parse(localStorage.getItem('tg_'+k)||'[]')}catch(e){return[]}},s(k,v){try{localStorage.setItem('tg_'+k,JSON.stringify(v))}catch(e){}}};
+const SEED={places:[
+{name:'Amber Fort',city:'Jaipur',category:'Heritage',price:500,emoji:'🏰',desc:'Hilltop palace-fort with mirror halls.'},
+{name:'Baga Beach',city:'Goa',category:'Beach',price:300,emoji:'🏖️',desc:'Water sports, shacks and sunsets.'},
+{name:'Solang Valley',city:'Manali',category:'Adventure',price:800,emoji:'🏔️',desc:'Paragliding, skiing and snow views.'},
+{name:'Alleppey Backwaters',city:'Kerala',category:'Nature',price:1200,emoji:'🛶',desc:'Houseboat cruise through calm lagoons.'},
+{name:'Ganga Aarti Ghat',city:'Varanasi',category:'Spiritual',price:200,emoji:'🪔',desc:'Evening aarti on the ghats of the Ganga.'},
+{name:'Shaniwar Wada',city:'Pune',category:'Heritage',price:250,emoji:'🏯',desc:'Historic Peshwa-era fortification.'}],
+guides:[
+{name:'Rahul Sharma',city:'Jaipur',languages:'Hindi, English',specialty:'Heritage',rate:1500,rating:4.8,emoji:'🧑‍🏫'},
+{name:'Maria Fernandes',city:'Goa',languages:'English, Konkani',specialty:'Beach',rate:1200,rating:4.6,emoji:'👩‍🏫'},
+{name:'Tenzin Dorje',city:'Manali',languages:'Hindi, English',specialty:'Adventure',rate:1800,rating:4.9,emoji:'🧗'},
+{name:'Anjali Nair',city:'Kerala',languages:'Malayalam, English',specialty:'Nature',rate:1400,rating:4.7,emoji:'👩‍🌾'},
+{name:'Pandit Mishra',city:'Varanasi',languages:'Hindi, Sanskrit',specialty:'Spiritual',rate:1000,rating:4.8,emoji:'🧘'},
+{name:'Sneha Kulkarni',city:'Pune',languages:'Marathi, Hindi, English',specialty:'Heritage',rate:1100,rating:4.5,emoji:'🧑‍🎓'}]};
+const uidg=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+
+async function load(){
+  if(local){D.places=LS.g('places');D.guides=LS.g('guides');D.bookings=LS.g('bookings');return}
+  const q=async c=>(await db.collection(c).get()).docs.map(d=>({id:d.id,...d.data()}));
+  D.places=await q('places');D.guides=await q('guides');
+  if(isAdmin){D.bookings=(await q('bookings')).flatMap(u=>(u.items||[]).map(i=>({...i,uid:u.id,uname:u.name})))}
+  else{const d=(await db.doc('bookings/'+uid).get()).data();D.bookings=d&&d.items||[]}
+}
+async function put(c,o){ // add/update places & guides (admin)
+  const id=o.id||uidg();const x={...o};delete x.id;
+  if(local){const a=LS.g(c).filter(i=>i.id!==id);a.push({id,...x});LS.s(c,a)}else await db.doc(c+'/'+id).set(x);
+}
+async function del(c,id){if(local)LS.s(c,LS.g(c).filter(i=>i.id!==id));else await db.doc(c+'/'+id).delete()}
+async function saveBooking(b){
+  if(local){const a=LS.g('bookings');a.push(b);LS.s('bookings',a);return}
+  await db.doc('bookings/'+uid).set({name:uname,items:[...D.bookings,b]});
+}
+async function setStatus(id,u,status){
+  if(local){LS.s('bookings',LS.g('bookings').map(b=>b.id===id?{...b,status}:b));}
+  else{const d=(await db.doc('bookings/'+u).get()).data();await db.doc('bookings/'+u).set({...d,items:d.items.map(b=>b.id===id?{...b,status}:b)})}
+  await refresh();
+}
+async function refresh(){try{await load()}catch(e){alert('Data error: '+(e.message||e.code))}render()}
+
+async function init(){
+  try{if(window.claude){usr=await claude.use('user');db=await claude.use('db')}}catch(e){}
+  if(db&&usr){try{const m=await usr.me();uid=m.id||'u';uname=m.name||'Tourist';canAdmin=(await usr.canEdit())||(await usr.isOwner())}catch(e){db=null}}
+  local=!db;
+  try{const s=sessionStorage.getItem('tg_sess');if(s){const o=JSON.parse(s);if(local)uname=o.n;if(!o.a||local||canAdmin){isAdmin=!!o.a;ready=true;view=isAdmin?'dash':'places';await refresh();return}}}catch(e){}
+  render();
+}
+function login(role){
+  let n=uname;
+  if(role==='admin'){
+    if(local){if($('#lp').value!=='admin123')return alert('Wrong admin password (demo: admin123)');n='Admin'}
+    else if(!canAdmin)return alert('Aapke paas admin access nahi hai. Sirf owner/editor admin login kar sakta hai.');
+  }else if(local){n=$('#ln').value.trim();if(!n)return alert('Please enter your name')}
+  uname=n;isAdmin=role==='admin';ready=true;view=isAdmin?'dash':'places';
+  try{sessionStorage.setItem('tg_sess',JSON.stringify({n,a:isAdmin}))}catch(e){}
+  refresh();
+}
+function logout(){try{sessionStorage.removeItem('tg_sess')}catch(e){}ready=false;isAdmin=false;render()}
+async function seed(){for(const c of['places','guides'])for(const o of SEED[c])await put(c,o);await refresh()}
+
+function opts(arr,k,all){return`<option value="">${all}</option>`+[...new Set(arr.map(x=>x[k]).filter(Boolean))].sort().map(v=>`<option ${F[k==='category'?'cat':'city']===v?'selected':''}>${esc(v)}</option>`).join('')}
+function filt(a,f){const q=F.q.toLowerCase();return a.filter(x=>(!F.city||x.city===F.city)&&(!f||!F.cat||(x.category||x.specialty)===F.cat)&&(!q||JSON.stringify(x).toLowerCase().includes(q)))}
+function setF(k,v){F[k]=v;render()}
+function bar(){return`<div class="bar"><input placeholder="🔍 Search…" value="${esc(F.q)}" onchange="setF('q',this.value)"><select onchange="setF('city',this.value)">${opts(D.places.concat(D.guides),'city','All cities')}</select><select onchange="setF('cat',this.value)">${opts(D.places,'category','All categories')}</select></div>`}
+const pCard=p=>`<div class="card"><div class="em">${esc(p.emoji||'📍')}</div><b>${esc(p.name)}</b><span class="mut">${esc(p.city)} • ${esc(p.category)}</span><span>${esc(p.desc)}</span><span class="pr">₹${esc(p.price)} / person</span><button class="btn p" onclick="book('${p.id}','')">Book now</button></div>`;
+const gCard=g=>`<div class="card"><div class="em">${esc(g.emoji||'🧑')}</div><b>${esc(g.name)}</b><span class="mut">${esc(g.city)} • ${esc(g.specialty)} • ⭐ ${esc(g.rating)}</span><span class="mut">🗣 ${esc(g.languages)}</span><span class="pr">₹${esc(g.rate)} / day</span><button class="btn p" onclick="book('','${g.id}')">Hire guide</button></div>`;
+
+function book(pid,gid){
+  const pl=D.places.find(x=>x.id===pid),gu=D.guides.find(x=>x.id===gid);
+  const city=(pl||gu).city;
+  const ps=D.places.filter(x=>x.city===city),gs=D.guides.filter(x=>x.city===city);
+  const m=document.createElement('div');m.className='modal';m.id='md';
+  m.innerHTML=`<div class="box"><h2>Book your trip – ${esc(city)}</h2>
+  <label>Place</label><select id="bp">${ps.map(x=>`<option value="${x.id}" ${x.id===pid?'selected':''}>${esc(x.name)} (₹${x.price})</option>`).join('')}</select>
+  <label>Guide</label><select id="bg">${gs.map(x=>`<option value="${x.id}" ${x.id===gid?'selected':''}>${esc(x.name)} (₹${x.rate}/day)</option>`).join('')||'<option value="">No guide</option>'}</select>
+  <label>Date</label><input type="date" id="bd" min="${new Date().toISOString().slice(0,10)}">
+  <label>People</label><input type="number" id="bn" value="2" min="1" max="30">
+  <div class="row" style="display:flex;gap:8px"><button class="btn p" onclick="confirmBook()">Confirm booking</button><button class="btn" onclick="$('#md').remove()">Cancel</button></div></div>`;
+  document.body.appendChild(m);
+}
+async function confirmBook(){
+  const p=D.places.find(x=>x.id===$('#bp').value),g=D.guides.find(x=>x.id===$('#bg').value),d=$('#bd').value,n=Math.max(1,+$('#bn').value||1);
+  if(!p||!d)return alert('Please choose a place and date');
+  const b={id:uidg(),placeName:p.name,city:p.city,guideName:g?g.name:'—',date:d,people:n,total:p.price*n+(g?g.rate:0),status:'Pending',by:uname,uid};
+  try{await saveBooking(b)}catch(e){return alert('Booking failed: '+(e.message||e.code))}
+  $('#md').remove();view='my';await refresh();
+}
+function bookTable(adm){
+  const a=D.bookings;if(!a.length)return'<p class="mut">No bookings yet.</p>';
+  return`<div class="tw"><table><tr><th>Tourist</th><th>Place</th><th>Guide</th><th>Date</th><th>People</th><th>Total</th><th>Status</th>${adm?'<th>Action</th>':''}</tr>`+a.map(b=>`<tr><td>${esc(b.uname||b.by)}</td><td>${esc(b.placeName)}</td><td>${esc(b.guideName)}</td><td>${esc(b.date)}</td><td>${esc(b.people)}</td><td>₹${esc(b.total)}</td><td><span class="st ${esc(b.status)}">${esc(b.status)}</span></td>${adm?`<td><button class="btn s" onclick="setStatus('${b.id}','${esc(b.uid)}','Confirmed')">Confirm</button> <button class="btn s d" onclick="setStatus('${b.id}','${esc(b.uid)}','Cancelled')">Cancel</button></td>`:''}</tr>`).join('')+'</table></div>';
+}
+function form(c){const f=c==='places'?[['name','Name'],['city','City'],['category','Category'],['price','Price/person (₹)'],['emoji','Emoji'],['desc','Description']]:[['name','Name'],['city','City'],['languages','Languages'],['specialty','Specialty'],['rate','Rate/day (₹)'],['rating','Rating (0-5)'],['emoji','Emoji']];
+  return`<div class="card"><b>Add new ${c==='places'?'place':'guide'}</b><div class="grid">${f.map(([k,l])=>`<div><label>${l}</label><input id="f_${c}_${k}"></div>`).join('')}</div><button class="btn p" onclick="add('${c}')">Add</button></div>`}
+async function add(c){
+  const ks=c==='places'?['name','city','category','price','emoji','desc']:['name','city','languages','specialty','rate','rating','emoji'];
+  const o={};ks.forEach(k=>o[k]=$('#f_'+c+'_'+k).value.trim());
+  if(!o.name||!o.city)return alert('Name and city are required');
+  ['price','rate','rating'].forEach(k=>{if(k in o)o[k]=+o[k]||0});
+  await put(c,o);await refresh();
+}
+async function rm(c,id){if(confirm('Delete this entry?')){await del(c,id);await refresh()}}
+function manage(c){
+  const a=D[c];return form(c)+`<h2>${c==='places'?'Places':'Guides'} (${a.length})</h2><div class="tw"><table><tr><th>Name</th><th>City</th><th>Price</th><th></th></tr>`+a.map(x=>`<tr><td>${esc(x.emoji)} ${esc(x.name)}</td><td>${esc(x.city)}</td><td>₹${esc(x.price??x.rate)}</td><td><button class="btn s d" onclick="rm('${c}','${x.id}')">Delete</button></td></tr>`).join('')+'</table></div>';
+}
+function setV(v){view=v;render()}
+function render(){
+  const hr=$('#hr'),app=$('#app');
+  if(!ready){hr.innerHTML='';
+    app.innerHTML=`<h2 style="text-align:center">Welcome to YatraGuide 👋</h2><div class="grid" style="max-width:640px;margin:20px auto"><div class="card"><div class="em">🧳</div><b>Tourist Login</b><span class="mut">Places aur guides dhoondo, booking karo.</span>${local?'<label>Your name</label><input id="ln">':'<span class="mut">Signed in as '+esc(uname)+'</span>'}<button class="btn p" onclick="login('tourist')">Tourist Login</button></div><div class="card"><div class="em">🛡</div><b>Admin Login</b><span class="mut">Guides, places aur bookings manage karo.</span>${local?'<label>Admin password</label><input id="lp" type="password" placeholder="admin123">':'<span class="mut">Sirf owner/editor ke liye</span>'}<button class="btn p" onclick="login('admin')">Admin Login</button></div></div>${local?'<p class="mut" style="text-align:center">Demo mode: data sirf is browser mein save hota hai.</p>':''}`;return}
+  hr.innerHTML=`<span>${isAdmin?'🛡 Admin':'🧳 Tourist'}: ${esc(uname)}</span><button class="btn s" onclick="logout()">Logout</button>`;
+  const tabs=isAdmin?[['dash','📋 Bookings'],['mp','📍 Manage Places'],['mg','🧑‍🏫 Manage Guides']]:[['places','📍 Places'],['guides','🧑‍🏫 Guides'],['my','🎫 My Bookings']];
+  if(!tabs.some(t=>t[0]===view))view=tabs[0][0];
+  let h=`<nav>${tabs.map(t=>`<button class="tab ${view===t[0]?'on':''}" onclick="setV('${t[0]}')">${t[1]}</button>`).join('')}</nav>`;
+  if(isAdmin&&!D.places.length&&!D.guides.length)h+=`<div class="card" style="margin-bottom:12px">No data yet. <button class="btn p" onclick="seed()">Load sample places & guides</button></div>`;
+  if(view==='places')h+=bar()+`<div class="grid">${filt(D.places,1).map(pCard).join('')||'<p class="mut">No places found.</p>'}</div>`;
+  else if(view==='guides')h+=bar()+`<div class="grid">${filt(D.guides,0).map(gCard).join('')||'<p class="mut">No guides found.</p>'}</div>`;
+  else if(view==='my')h+='<h2>My Bookings</h2>'+bookTable(false);
+  else if(view==='dash')h+=`<h2>All Bookings (${D.bookings.length})</h2>`+bookTable(true);
+  else if(view==='mp')h+=manage('places');else h+=manage('guides');
+  app.innerHTML=h;
+}
+init();
+</script></body></html>
